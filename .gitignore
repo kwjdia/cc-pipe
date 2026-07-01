@@ -1,0 +1,11 @@
+# Local, machine-specific Claude Code settings
+.claude/settings.local.json
+
+# AI pipeline run artifacts (keep the directory, ignore run outputs)
+docs/ai/runs/*
+!docs/ai/runs/.gitkeep
+
+# OS / editor cruft
+Thumbs.db
+Desktop.ini
+.DS_Store

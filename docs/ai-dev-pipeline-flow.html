@@ -1,0 +1,333 @@
+<title>AI 개발 파이프라인 흐름도</title>
+<style>
+  :root {
+    --bg: #0f1420;
+    --panel: #161d2e;
+    --panel-2: #1b2438;
+    --ink: #e8edf7;
+    --muted: #8b97b0;
+    --faint: #6b7794;
+    --line: #2a3450;
+    --codex: #38bdf8;
+    --app: #22d3ee;
+    --gate: #f59e0b;
+    --claude: #a78bfa;
+    --ok: #34d399;
+    --stop: #f87171;
+    --mono: ui-monospace, "SF Mono", "Cascadia Code", "JetBrains Mono", Menlo, Consolas, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background:
+      radial-gradient(1200px 600px at 80% -10%, #16213a 0%, transparent 60%),
+      radial-gradient(900px 500px at 0% 110%, #14243a 0%, transparent 55%),
+      var(--bg);
+    color: var(--ink);
+    font-family: var(--sans);
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 56px 24px 80px; }
+
+  header { margin-bottom: 36px; }
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--codex);
+    margin: 0 0 12px;
+  }
+  h1 { font-size: 30px; line-height: 1.2; margin: 0 0 10px; text-wrap: balance; font-weight: 650; }
+  .sub { color: var(--muted); max-width: 66ch; margin: 0; font-size: 15px; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 16px; margin: 26px 0 0; padding-top: 22px; border-top: 1px solid var(--line); }
+  .lg { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--muted); }
+  .dot { width: 11px; height: 11px; border-radius: 3px; flex: none; }
+
+  /* phase band */
+  .phase { display: flex; align-items: center; gap: 12px; width: 100%; max-width: 720px; margin: 30px 0 14px; }
+  .phase .pn { font-family: var(--mono); font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+  .phase .bar { height: 1px; background: var(--line); flex: 1; }
+
+  /* flow */
+  .flow { display: flex; flex-direction: column; align-items: center; }
+
+  .node {
+    width: 100%;
+    max-width: 560px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--line);
+    border-radius: 10px;
+    padding: 15px 18px;
+    position: relative;
+  }
+  .node .role {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    margin: 0 0 6px;
+    color: var(--muted);
+  }
+  .node .title { font-size: 15px; font-weight: 600; margin: 0 0 4px; }
+  .node .desc { font-size: 13px; color: var(--muted); margin: 0; }
+  .node code { font-family: var(--mono); font-size: 12px; color: var(--ink); background: #0a0e18; padding: 1px 5px; border-radius: 4px; }
+  .node .file {
+    display: inline-block; margin-top: 10px;
+    font-family: var(--mono); font-size: 11.5px;
+    color: var(--faint); background: #0a0e18;
+    border: 1px solid var(--line); border-radius: 6px; padding: 3px 8px;
+  }
+  .node .file b { color: var(--muted); font-weight: 500; }
+
+  .node.codex  { border-left-color: var(--codex); }
+  .node.codex .role { color: var(--codex); }
+  .node.app    { border-left-color: var(--app); }
+  .node.app .role { color: var(--app); }
+  .node.claude { border-left-color: var(--claude); }
+  .node.claude .role { color: var(--claude); }
+  .node.user   { border-left-color: var(--gate); }
+  .node.user .role { color: var(--gate); }
+
+  .conn { width: 2px; height: 24px; background: var(--line); flex: none; }
+  .conn.short { height: 15px; }
+
+  /* two entry lanes */
+  .entries { display: flex; gap: 18px; width: 100%; max-width: 720px; align-items: stretch; }
+  .entries .lane { flex: 1; display: flex; flex-direction: column; align-items: center; }
+  .entries .node { max-width: 100%; height: 100%; }
+  .cmd {
+    font-family: var(--mono); font-size: 12px; color: var(--ink);
+    background: #0a0e18; border: 1px solid var(--line); border-radius: 7px;
+    padding: 8px 10px; margin: 0 0 10px; word-break: break-all;
+  }
+  .cmd .p { color: var(--ok); }
+  .cmd .a { color: var(--codex); }
+  .cmd .g { color: var(--app); }
+
+  /* converge */
+  .converge { display: flex; flex-direction: column; align-items: center; width: 100%; max-width: 720px; }
+  .vee { width: 60%; height: 22px; border-bottom: 2px solid var(--line); border-left: 2px solid var(--line); border-right: 2px solid var(--line); border-bottom-left-radius: 12px; border-bottom-right-radius: 12px; }
+  .merge-label { font-family: var(--mono); font-size: 11px; color: var(--muted); margin: 8px 0 2px; }
+
+  .artifact {
+    width: 100%; max-width: 560px; text-align: center;
+    background: linear-gradient(180deg, rgba(56,189,248,0.10), rgba(34,211,238,0.06));
+    border: 1px solid rgba(56,189,248,0.35);
+    border-radius: 10px; padding: 13px 16px;
+  }
+  .artifact .t { font-family: var(--mono); font-size: 13.5px; font-weight: 600; color: var(--codex); }
+  .artifact .d { font-size: 12px; color: var(--muted); margin-top: 3px; }
+
+  .decide {
+    width: 100%; max-width: 560px; text-align: center;
+    background: var(--panel-2);
+    border: 1px dashed var(--gate);
+    border-radius: 10px; padding: 12px 18px;
+    font-size: 14px; font-weight: 600;
+  }
+  .decide.codex-d { border-color: var(--codex); }
+  .decide .q { font-family: var(--mono); font-size: 11px; color: var(--muted); font-weight: 400; display: block; margin-top: 3px; }
+
+  .branch { display: flex; gap: 18px; width: 100%; max-width: 720px; margin-top: 4px; align-items: stretch; }
+  .branch > .lane { flex: 1; display: flex; flex-direction: column; align-items: center; }
+  .branch .node { max-width: 100%; }
+  .tag { font-family: var(--mono); font-size: 11px; font-weight: 600; padding: 4px 12px; border-radius: 20px; margin-bottom: 4px; }
+  .tag.no  { color: var(--stop); background: rgba(248,113,113,0.12); border: 1px solid rgba(248,113,113,0.3); }
+  .tag.yes { color: var(--ok);   background: rgba(52,211,153,0.12);  border: 1px solid rgba(52,211,153,0.3); }
+
+  .end {
+    width: 100%; max-width: 560px; text-align: center;
+    background: rgba(52,211,153,0.07);
+    border: 1px solid rgba(52,211,153,0.28);
+    border-radius: 10px; padding: 13px 16px;
+  }
+  .end.stop { background: rgba(248,113,113,0.06); border-color: rgba(248,113,113,0.28); }
+  .end .t { font-size: 13.5px; font-weight: 600; }
+  .end .d { font-size: 12px; color: var(--muted); margin-top: 3px; }
+
+  /* prerequisite note */
+  .note {
+    width: 100%; max-width: 720px; margin: 4px 0 8px;
+    background: rgba(34,211,238,0.05);
+    border: 1px solid rgba(34,211,238,0.25);
+    border-radius: 10px; padding: 14px 16px;
+  }
+  .note .nt { font-size: 12px; font-weight: 600; color: var(--app); font-family: var(--mono); letter-spacing: 0.08em; text-transform: uppercase; margin: 0 0 6px; }
+  .note p { margin: 0; font-size: 12.5px; color: var(--muted); }
+  .note code { font-family: var(--mono); font-size: 11.5px; color: var(--ink); background: #0a0e18; padding: 1px 5px; border-radius: 4px; }
+
+  .outputs { margin-top: 50px; padding-top: 30px; border-top: 1px solid var(--line); }
+  .outputs h2 { font-size: 15px; margin: 0 0 4px; }
+  .outputs .path { font-family: var(--mono); font-size: 12px; color: var(--codex); margin: 0 0 8px; }
+  .outputs .oo { font-size: 12.5px; color: var(--muted); margin: 0 0 18px; max-width: 70ch; }
+  .files { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px; }
+  .fcard { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; }
+  .fcard .fn { font-family: var(--mono); font-size: 12.5px; color: var(--ink); font-weight: 600; }
+  .fcard .fd { font-size: 12px; color: var(--muted); margin-top: 3px; }
+
+  @media (max-width: 620px) {
+    .entries, .branch { flex-direction: column; gap: 10px; }
+    h1 { font-size: 24px; }
+  }
+</style>
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow">Codex Planner × Claude CLI Builder</p>
+    <h1>AI 개발 파이프라인 흐름도</h1>
+    <p class="sub">개발 요청을 Codex가 분석·계획하고, 사람이 승인한 뒤 Claude CLI가 구현한다. 계획 단계는 <b style="color:var(--codex)">CLI 스크립트</b>와 <b style="color:var(--app)">Codex 앱</b> 두 경로로 진입할 수 있으며, 두 경로 모두 동일한 <code style="font-family:var(--mono);font-size:12px">codex-plan.json</code>으로 수렴한다.</p>
+    <div class="legend">
+      <span class="lg"><span class="dot" style="background:var(--codex)"></span>Codex CLI — codex exec (read-only)</span>
+      <span class="lg"><span class="dot" style="background:var(--app)"></span>Codex 앱 — $dev-planner 스킬</span>
+      <span class="lg"><span class="dot" style="background:var(--gate)"></span>사람 — 승인 게이트</span>
+      <span class="lg"><span class="dot" style="background:var(--claude)"></span>Claude CLI — Builder</span>
+    </div>
+  </header>
+
+  <div class="flow">
+
+    <div class="note" style="background:rgba(248,113,113,0.05);border-color:rgba(248,113,113,0.3);max-width:720px">
+      <p class="nt" style="color:var(--stop)">실행 전제 (미충족 시 파이프라인 중단)</p>
+      <p><b>① git 저장소 필요</b> — <code>git init</code> 없이는 git status/diff 기반 구현·검토가 무의미. <b>② POSIX 셸 필요</b> — <code>ai-dev.sh</code>는 bash 스크립트로 Windows에선 <b>Git Bash / WSL</b>에서만 동작(PowerShell 불가). <b>③ CLI 로그인</b> — codex·claude·python PATH 등록 및 인증.</p>
+    </div>
+
+    <!-- PLAN PHASE -->
+    <div class="phase"><span class="pn">Plan 단계 · Codex</span><span class="bar"></span></div>
+
+    <div class="note">
+      <p class="nt">사전 준비 · 스킬 탐색</p>
+      <p><code>.agents/skills/dev-planner/SKILL.md</code>는 Codex가 <b>자동 탐색</b>한다(cwd→repo root 스캔, <code>config.toml</code> 등록 불필요). <code>AGENTS.md</code>는 세션마다 자동 로드되어 Planner 규칙을 강제한다. 단, <code>codex exec</code> 비대화형에서 <code>$dev-planner</code> <b>명시 호출은 문서상 미확정</b> — 프롬프트에 규칙을 인라인 재기술해 폴백을 둔다(현재 스크립트가 이미 수행).</p>
+    </div>
+
+    <!-- two entry lanes -->
+    <div class="entries">
+      <!-- CLI entry -->
+      <div class="lane">
+        <div class="node codex">
+          <p class="role">진입 A · CLI (자동/비대화형)</p>
+          <div class="cmd"><span class="p">$</span> ./scripts/ai-dev.sh <span class="a">"…요청…"</span></div>
+          <p class="desc"><code>codex exec --sandbox read-only</code> 로 스킬 실행 → 원본 출력 → Python으로 JSON 파싱. 파싱 실패 시 원본 표시 후 <b style="color:var(--stop)">중단</b>.</p>
+          <span class="file"><b>→</b> user-prompt.txt · codex-plan.raw</span>
+        </div>
+      </div>
+      <!-- App entry -->
+      <div class="lane">
+        <div class="node app">
+          <p class="role">진입 B · Codex 앱 (대화형)</p>
+          <div class="cmd"><span class="g">$dev-planner</span> …요청…</div>
+          <p class="desc">앱 composer에서 스킬을 대화형 실행 → 질문·가정을 즉석 해소. <b style="color:var(--stop)">수동 브리지 필요</b>: 스크립트가 run 디렉터리 생성·스키마 검증을 안 하므로, 확정 JSON을 직접 <code>codex-plan.json</code>으로 저장해야 함(read-only면 저장 불가 → workspace-write 승인).</p>
+          <span class="file"><b>수동 →</b> docs/ai/runs/{ts}/codex-plan.json</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- converge -->
+    <div class="converge">
+      <div class="vee"></div>
+      <div class="merge-label">▼ 두 진입점이 동일 산출물로 수렴</div>
+    </div>
+    <div class="artifact">
+      <div class="t">codex-plan.json</div>
+      <div class="d">구조화된 개발 계획 — 요구사항 · 범위 · 단계 · 테스트 기준 · claude_prompt</div>
+    </div>
+    <div class="conn short"></div>
+
+    <!-- decision: is dev request -->
+    <div class="decide codex-d">
+      is_development_request ?
+      <span class="q">개발 명령인가, 일반 질문인가</span>
+    </div>
+
+    <div class="branch">
+      <div class="lane">
+        <span class="tag no">false · 일반 질문</span>
+        <div class="conn short"></div>
+        <div class="end stop">
+          <div class="t">answer 출력 후 종료</div>
+          <div class="d">Claude 미호출. 사용자에게 직접 응답.</div>
+        </div>
+      </div>
+      <div class="lane">
+        <span class="tag yes">true · 개발 요청</span>
+        <div class="conn short"></div>
+        <div class="node">
+          <p class="role">요약 출력</p>
+          <p class="title">플랜 요약 표시</p>
+          <p class="desc">요약 · 요구사항 · 가정 · 질문 · 작업계획 · 리스크를 사람에게 제시.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="conn"></div>
+
+    <!-- BUILD PHASE -->
+    <div class="phase"><span class="pn">Build 단계 · 사람 승인 → Claude</span><span class="bar"></span></div>
+
+    <div class="note" style="background:rgba(245,158,11,0.05);border-color:rgba(245,158,11,0.28)">
+      <p class="nt" style="color:var(--gate)">핸드오프 원칙</p>
+      <p>Codex(CLI·앱)는 Claude를 직접 호출하지 않는다. 빌드는 사람이 실행하는 <code>./scripts/ai-build.sh &lt;run-dir&gt;</code> 로만 이어진다(※ 이 스크립트는 <b>신규 작성 필요</b> — 원본엔 없음). <b style="color:var(--stop)">승인 전 questions를 반드시 해소</b>할 것: <code>claude -p</code>는 자율 실행이라 미해결 질문을 임의 가정으로 진행한다.</p>
+    </div>
+
+    <div class="decide">
+      <span style="color:var(--gate)">🔐 사람 승인 게이트</span> &nbsp;[y/N]
+      <span class="q">Claude 자동 호출 전 필수 확인 지점</span>
+    </div>
+
+    <div class="branch">
+      <div class="lane">
+        <span class="tag no">N · 거부</span>
+        <div class="conn short"></div>
+        <div class="end stop">
+          <div class="t">중단</div>
+          <div class="d">Codex 계획은 run 디렉터리에 보존.</div>
+        </div>
+      </div>
+      <div class="lane">
+        <span class="tag yes">y · 승인</span>
+        <div class="conn short"></div>
+        <div class="node claude">
+          <p class="role">구현 프롬프트 조립</p>
+          <p class="title">claude-prompt.md 생성</p>
+          <p class="desc">계획 JSON + claude_prompt + 추가 규칙 결합.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="conn"></div>
+
+    <div class="node claude">
+      <p class="role">Claude CLI · Build</p>
+      <p class="title">실제 코드 구현</p>
+      <p class="desc"><code>claude -p … --allowedTools "Read,Edit,Write,Bash"</code><br>git status 확인 → 관련 파일 탐색 → 승인 범위만 구현 → 테스트. <b style="color:var(--gate)">Write 필수</b>(신규 파일·테스트 생성). <code>-p</code>는 자율 실행이라 되물을 수 없음.</p>
+      <span class="file"><b>→</b> claude-result.md</span>
+    </div>
+    <div class="conn"></div>
+
+    <div class="node user">
+      <p class="role">User · Review</p>
+      <p class="title">사람이 변경 확인</p>
+      <p class="desc"><code>git diff --stat · git diff</code> 검토 후 수동 commit. 자동 commit/merge 없음.</p>
+    </div>
+    <div class="conn short"></div>
+    <div class="end"><div class="t">✓ 완료 — 결과 디렉터리 안내</div></div>
+
+  </div>
+
+  <section class="outputs">
+    <h2>실행 산출물</h2>
+    <p class="path">docs/ai/runs/{timestamp}/</p>
+    <p class="oo">CLI 진입은 5개 파일을 모두 남긴다. Codex 앱 진입은 대화형이라 <code style="font-family:var(--mono);font-size:11.5px">codex-plan.raw</code>가 생략될 수 있으나, 이후 <code style="font-family:var(--mono);font-size:11.5px">codex-plan.json</code>부터는 동일하게 이어진다.</p>
+    <div class="files">
+      <div class="fcard"><div class="fn">user-prompt.txt</div><div class="fd">사용자 원본 개발 요청</div></div>
+      <div class="fcard"><div class="fn">codex-plan.raw</div><div class="fd">Codex 원본 출력 (CLI 경로)</div></div>
+      <div class="fcard"><div class="fn">codex-plan.json</div><div class="fd">파싱된 개발 계획 · 수렴 지점</div></div>
+      <div class="fcard"><div class="fn">claude-prompt.md</div><div class="fd">Claude 최종 구현 프롬프트</div></div>
+      <div class="fcard"><div class="fn">claude-result.md</div><div class="fd">Claude 실행 결과</div></div>
+    </div>
+  </section>
+</div>

@@ -1,0 +1,7 @@
+# Shell 스크립트는 항상 LF 유지 (CRLF면 bash 실행이 깨짐)
+*.sh text eol=lf
+
+# 문서/설정은 git 기본 자동 처리
+*.md text
+*.json text
+*.html text

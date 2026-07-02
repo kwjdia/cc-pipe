@@ -82,18 +82,26 @@ sh ./.cc-pipe/update.sh                # 확인 + 적용
 
 ### 2) 코딩 앱 방식 — 대화형 계획
 
-Codex 앱·Claude Code 등에서 프로젝트를 열면, 설치 시 주입된 `AGENTS.md`·`CLAUDE.md` 관리 블록을 에이전트가 자동으로 읽어 파이프라인 규칙을 따른다.
+Codex 앱·Claude Code 등에서 프로젝트를 열면, 설치 시 주입된 `AGENTS.md`·`CLAUDE.md` 관리 블록을 에이전트가 자동으로 읽어 파이프라인 규칙을 따른다. Codex 앱에는 계획 전용(`dev-planner`)과 원스텝 자동(`dev-runner`) 두 스킬이 있다.
 
-**Codex 앱 (Planner)** — 질문을 즉석에서 해소하며 계획을 다듬을 때 유리하다.
+**Codex 앱 — 원스텝 자동 (`dev-runner`)** — 계획 생성부터 Claude 빌드까지 한 번에.
 
-1. composer에서 스킬을 호출: `$dev-planner 로그인 5회 실패 시 계정 잠금 처리`
+1. composer에서 호출: `$dev-runner 로그인 5회 실패 시 계정 잠금 처리`
+2. Codex가 계획(JSON)을 만들어 `docs/ai/runs/<timestamp>/`에 저장한 뒤, `ai-build.sh --yes`로 **Claude 빌드까지 자동 실행**한다.
+3. 끝나면 `git diff`로 검토 후 commit.
+
+> `dev-runner`는 명령 실행 권한(비 read-only)이 필요하며 **승인 게이트 없이 자동 실행**된다. 계획 단계에서 멈추고 사람이 승인하려면 아래 `dev-planner`를 쓴다.
+
+**Codex 앱 — 계획만 (`dev-planner`)** — 질문을 즉석 해소하며 계획을 다듬고, 빌드는 사람이 승인.
+
+1. composer에서 호출: `$dev-planner 로그인 5회 실패 시 계정 잠금 처리`
 2. 대화로 요구사항·가정·질문을 확정한다.
 3. 확정된 계획 JSON을 `docs/ai/runs/<timestamp>/codex-plan.json`으로 저장한다.
 4. 빌드는 사람이 실행: `./scripts/ai-build.sh docs/ai/runs/<timestamp>`
 
 **Claude Code 앱 (Builder)** — 승인된 계획을 구현하는 단계. `CLAUDE.md` 블록의 Builder 규칙(승인 범위만·신규 파일은 Write·Secret 금지 등)을 따른다. 앱 내장 터미널에서 위 스크립트를 그대로 실행해도 된다.
 
-> 코딩 앱에서도 Codex는 Claude를 직접 호출하지 않는다. 계획과 빌드 사이에는 항상 사람의 승인이 들어간다.
+> `dev-planner` 경로에서는 Codex가 Claude를 직접 호출하지 않고 계획과 빌드 사이에 사람 승인이 들어간다. `dev-runner`는 이 게이트를 생략하는 자동 경로다.
 
 ---
 

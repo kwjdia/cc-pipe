@@ -39,7 +39,9 @@ write_agents_block() {
 ```
 
 Codex(Planner)는 요청 판별 → 요구사항 구체화 → 개발 계획/구현 프롬프트(JSON)를 생성하며 코드는 수정하지 않는다.
-개발 요청 분석은 `dev-planner` 스킬(`.agents/skills/dev-planner/SKILL.md`)을 사용한다(Codex 자동 탐색).
+스킬(Codex 자동 탐색):
+- `dev-planner` — 개발 계획(JSON)까지만 생성. 빌드는 사람이 승인 후 실행.
+- `dev-runner` — 계획 생성 후 곧바로 Claude 빌드까지 **자동 실행**(`ai-build.sh --yes`). 명령 실행 권한 필요, 승인 게이트 없음.
 
 자동 업데이트: `ai-dev.sh` 실행 시 원격 최신 여부를 확인해 자동 재설치한다(fail-open, `CC_PIPE_NO_UPDATE=1` 로 비활성).
 수동 확인: macOS `sh .cc-pipe/update.sh --check-only` · Windows `.\.cc-pipe\update.ps1 -CheckOnly`
@@ -136,14 +138,22 @@ guard_exists() {
   fi
 }
 
-guard_exists ".agents/skills/dev-planner"
+# .agents/skills 하위의 모든 스킬(dev-planner, dev-runner, …)을 대상으로 한다.
+for skill_dir in "$REPO_ROOT"/.agents/skills/*/; do
+  [ -d "$skill_dir" ] || continue
+  guard_exists ".agents/skills/$(basename "$skill_dir")"
+done
 guard_exists "scripts/ai-dev.sh"
 guard_exists "scripts/ai-build.sh"
 
 mkdir -p "$TARGET_ROOT/.agents/skills" "$TARGET_ROOT/scripts" "$TARGET_ROOT/docs/ai/runs"
 
-rm -rf "$TARGET_ROOT/.agents/skills/dev-planner"
-cp -R "$REPO_ROOT/.agents/skills/dev-planner" "$TARGET_ROOT/.agents/skills/"
+for skill_dir in "$REPO_ROOT"/.agents/skills/*/; do
+  [ -d "$skill_dir" ] || continue
+  name=$(basename "$skill_dir")
+  rm -rf "$TARGET_ROOT/.agents/skills/$name"
+  cp -R "$REPO_ROOT/.agents/skills/$name" "$TARGET_ROOT/.agents/skills/"
+done
 cp "$REPO_ROOT/scripts/ai-dev.sh" "$TARGET_ROOT/scripts/ai-dev.sh"
 cp "$REPO_ROOT/scripts/ai-build.sh" "$TARGET_ROOT/scripts/ai-build.sh"
 chmod +x "$TARGET_ROOT/scripts/ai-dev.sh" "$TARGET_ROOT/scripts/ai-build.sh" 2>/dev/null || true

@@ -12,8 +12,9 @@
 5. Claude Code CLI에 전달할 구현 프롬프트를 작성한다.
 6. 구현 후 필요하면 git diff를 기준으로 리뷰한다.
 
-개발 요청 분석·계획 수립은 `dev-planner` 스킬(`.agents/skills/dev-planner/SKILL.md`)을 사용한다.
-이 스킬은 Codex가 저장소에서 자동 탐색한다(별도 등록 불필요).
+개발 요청 분석·계획 수립은 스킬을 사용한다(Codex가 저장소에서 자동 탐색, 별도 등록 불필요).
+- `dev-planner` (`.agents/skills/dev-planner/SKILL.md`) — 개발 계획(JSON)까지만 생성. 빌드는 사람이 승인 후 실행.
+- `dev-runner` (`.agents/skills/dev-runner/SKILL.md`) — 계획 생성 후 곧바로 Claude 빌드까지 자동 실행(`ai-build.sh --yes`). 명령 실행 권한 필요, 승인 게이트 없음.
 
 ## Codex 제한 사항
 

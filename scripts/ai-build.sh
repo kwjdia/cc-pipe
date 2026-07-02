@@ -2,19 +2,30 @@
 #
 # ai-build.sh — Codex 개발 계획(codex-plan.json)을 사람이 승인하면 Claude로 구현하는 빌드 단계.
 #
-#   사용법: ./scripts/ai-build.sh <run-dir>
+#   사용법: ./scripts/ai-build.sh <run-dir> [--yes]
 #     예:   ./scripts/ai-build.sh docs/ai/runs/20260701-120000
+#     예:   ./scripts/ai-build.sh docs/ai/runs/20260701-120000 --yes   # 무프롬프트 자동 승인
 #
-# 이 스크립트는 두 진입점이 공유한다.
-#   - CLI 경로: ai-dev.sh 가 계획 생성 후 자동 위임
+# 이 스크립트는 여러 진입점이 공유한다.
+#   - CLI 경로: ai-dev.sh 가 계획 생성 후 자동 위임 (승인 게이트 유지)
 #   - Codex 앱 경로: 앱에서 $dev-planner 로 만든 계획을 codex-plan.json 으로 저장한 뒤 직접 실행
+#   - dev-runner 스킬: 계획 저장 후 --yes 로 자동 실행 (게이트 생략)
 #
 set -euo pipefail
 
-RUN_DIR="${1:-}"
+RUN_DIR=""
+AUTO_YES="false"
+
+for arg in "$@"; do
+  case "$arg" in
+    --yes|-y) AUTO_YES="true" ;;
+    -*) echo "Unknown argument: $arg" >&2; exit 1 ;;
+    *) RUN_DIR="$arg" ;;
+  esac
+done
 
 if [ -z "$RUN_DIR" ]; then
-  echo "사용법: ./scripts/ai-build.sh <run-dir>" >&2
+  echo "사용법: ./scripts/ai-build.sh <run-dir> [--yes]" >&2
   echo "  예: ./scripts/ai-build.sh docs/ai/runs/20260701-120000" >&2
   exit 1
 fi
@@ -70,10 +81,14 @@ set -e
 # ---- git 저장소 경고 (검토 결과: B1) -----------------------------------------
 if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   echo "경고: 현재 위치가 git 저장소가 아닙니다. 구현 후 git diff 검토가 불가능합니다." >&2
-  read -r -p "그래도 계속할까요? [y/N] " GIT_CONFIRM
-  if [[ "$GIT_CONFIRM" != "y" && "$GIT_CONFIRM" != "Y" ]]; then
-    echo "중단했습니다."
-    exit 0
+  if [ "$AUTO_YES" = "true" ]; then
+    echo "경고: --yes 자동 모드 — 확인 없이 계속합니다." >&2
+  else
+    read -r -p "그래도 계속할까요? [y/N] " GIT_CONFIRM
+    if [[ "$GIT_CONFIRM" != "y" && "$GIT_CONFIRM" != "Y" ]]; then
+      echo "중단했습니다."
+      exit 0
+    fi
   fi
 fi
 
@@ -137,11 +152,16 @@ if [ "${HAS_Q:-0}" -gt 0 ]; then
 fi
 
 # ---- 승인 게이트 (검토 결과: NFR-3 / SC-6) -----------------------------------
-read -r -p "이 플랜으로 Claude Code 구현을 진행할까요? [y/N] " CONFIRM
-if [[ "$CONFIRM" != "y" && "$CONFIRM" != "Y" ]]; then
-  echo "중단했습니다. Codex 계획은 다음 위치에 보존됩니다:"
-  echo "  $PLAN"
-  exit 0
+# --yes 는 dev-runner(코딩 앱 원스텝) 등 자동 경로 전용. 기본 경로는 게이트 유지.
+if [ "$AUTO_YES" = "true" ]; then
+  echo "==> --yes: 승인 게이트를 건너뛰고 자동 진행합니다."
+else
+  read -r -p "이 플랜으로 Claude Code 구현을 진행할까요? [y/N] " CONFIRM
+  if [[ "$CONFIRM" != "y" && "$CONFIRM" != "Y" ]]; then
+    echo "중단했습니다. Codex 계획은 다음 위치에 보존됩니다:"
+    echo "  $PLAN"
+    exit 0
+  fi
 fi
 
 # ---- Claude 구현 프롬프트 조립 -----------------------------------------------

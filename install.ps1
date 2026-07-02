@@ -32,7 +32,9 @@ function Get-AgentsBlock {
 ```
 
 Codex(Planner)는 요청 판별 → 요구사항 구체화 → 개발 계획/구현 프롬프트(JSON)를 생성하며 코드는 수정하지 않는다.
-개발 요청 분석은 `dev-planner` 스킬(`.agents/skills/dev-planner/SKILL.md`)을 사용한다(Codex 자동 탐색).
+스킬(Codex 자동 탐색):
+- `dev-planner` — 개발 계획(JSON)까지만 생성. 빌드는 사람이 승인 후 실행.
+- `dev-runner` — 계획 생성 후 곧바로 Claude 빌드까지 **자동 실행**(`ai-build.sh --yes`). 명령 실행 권한 필요, 승인 게이트 없음.
 
 자동 업데이트: `ai-dev.sh` 실행 시 원격 최신 여부를 확인해 자동 재설치한다(fail-open, `CC_PIPE_NO_UPDATE=1` 로 비활성).
 수동 확인: macOS `sh .cc-pipe/update.sh --check-only` · Windows `.\.cc-pipe\update.ps1 -CheckOnly`
@@ -108,7 +110,11 @@ function Install-Updater {
 }
 
 # ---- 자산 복사 --------------------------------------------------------------
-$guards = @(".agents\skills\dev-planner", "scripts\ai-dev.sh", "scripts\ai-build.sh")
+# .agents/skills 하위의 모든 스킬(dev-planner, dev-runner, …)을 대상으로 한다.
+$skillsSource = Join-Path $repoRoot ".agents\skills"
+$skillDirs = Get-ChildItem -LiteralPath $skillsSource -Directory
+$guards = @("scripts\ai-dev.sh", "scripts\ai-build.sh")
+foreach ($s in $skillDirs) { $guards += ".agents\skills\" + $s.Name }
 foreach ($g in $guards) {
   $dest = Join-Path $targetRoot $g
   if ((Test-Path -LiteralPath $dest) -and -not $Force) {
@@ -120,9 +126,11 @@ New-Item -ItemType Directory -Path (Join-Path $targetRoot ".agents\skills") -For
 New-Item -ItemType Directory -Path (Join-Path $targetRoot "scripts") -Force | Out-Null
 New-Item -ItemType Directory -Path (Join-Path $targetRoot "docs\ai\runs") -Force | Out-Null
 
-$devPlannerDest = Join-Path $targetRoot ".agents\skills\dev-planner"
-if (Test-Path -LiteralPath $devPlannerDest) { Remove-Item -LiteralPath $devPlannerDest -Recurse -Force }
-Copy-Item -LiteralPath (Join-Path $repoRoot ".agents\skills\dev-planner") -Destination (Join-Path $targetRoot ".agents\skills") -Recurse -Force
+foreach ($s in $skillDirs) {
+  $skillDest = Join-Path $targetRoot (".agents\skills\" + $s.Name)
+  if (Test-Path -LiteralPath $skillDest) { Remove-Item -LiteralPath $skillDest -Recurse -Force }
+  Copy-Item -LiteralPath $s.FullName -Destination (Join-Path $targetRoot ".agents\skills") -Recurse -Force
+}
 Copy-Item -LiteralPath (Join-Path $repoRoot "scripts\ai-dev.sh") -Destination (Join-Path $targetRoot "scripts\ai-dev.sh") -Force
 Copy-Item -LiteralPath (Join-Path $repoRoot "scripts\ai-build.sh") -Destination (Join-Path $targetRoot "scripts\ai-build.sh") -Force
 

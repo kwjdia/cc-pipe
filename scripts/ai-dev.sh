@@ -23,6 +23,22 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$REPO_ROOT"
 
+# ---- cc-pipe 자동 업데이트 (설치본에서만 동작) --------------------------------
+# .cc-pipe/update.sh 가 있으면(=타깃 프로젝트에 설치된 경우) 실행 시작 시 원격
+# 최신 여부를 확인하고 필요하면 재설치한다. fail-open(오프라인/실패 시 그냥 진행).
+# cc-pipe 소스 저장소에는 .cc-pipe/ 가 없으므로 자기 자신은 자동 업데이트되지 않는다.
+# CC_PIPE_NO_UPDATE=1 로 비활성화(재실행 루프 방지 및 오프라인/CI 용).
+if [ -z "${CC_PIPE_NO_UPDATE:-}" ] && [ -f "$REPO_ROOT/.cc-pipe/update.sh" ]; then
+  set +e
+  sh "$REPO_ROOT/.cc-pipe/update.sh" --auto
+  UPD_EXIT=$?
+  set -e
+  if [ "$UPD_EXIT" -eq 10 ]; then
+    echo "==> cc-pipe 업데이트 적용됨 — 최신 버전으로 재실행합니다."
+    exec env CC_PIPE_NO_UPDATE=1 "$0" "$@"
+  fi
+fi
+
 # ---- 의존성 확인 --------------------------------------------------------------
 if ! command -v codex >/dev/null 2>&1; then
   echo "오류: codex CLI를 찾을 수 없습니다. Codex CLI 설치 및 PATH 등록을 확인하세요." >&2

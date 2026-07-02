@@ -24,6 +24,38 @@
 
 ---
 
+## 설치 (다른 프로젝트에 적용)
+
+cc-pipe를 설치할 프로젝트 루트에서 아래 원라이너를 실행한다(저장소 public). 전체 명령·옵션은 [`INSTALL.md`](INSTALL.md) 참고.
+
+**Windows (PowerShell)**
+```powershell
+$repo="https://github.com/kwjdia/cc-pipe.git"; $tmp=Join-Path $env:TEMP ("cc-pipe-"+[guid]::NewGuid()); git clone --depth 1 $repo $tmp; & (Join-Path $tmp "install.ps1") -TargetPath (Get-Location); Remove-Item -LiteralPath $tmp -Recurse -Force
+```
+
+**macOS / Linux**
+```sh
+tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT; git clone --depth 1 https://github.com/kwjdia/cc-pipe.git "$tmp" && sh "$tmp/install.sh" "$(pwd)"
+```
+
+설치되는 것: `dev-planner` 스킬 · `scripts/ai-dev.sh`·`ai-build.sh` · `docs/ai/runs/` · `.cc-pipe/`(업데이터+`version.json`) · `AGENTS.md`/`CLAUDE.md` 관리 블록(기존 내용 보존).
+
+### 자동 업데이트
+
+설치본에서 `./scripts/ai-dev.sh`를 실행하면 시작 시 원격 `main`과 버전을 비교해 최신이 아니면 **자동 재설치 후 진행**한다(오프라인/실패 시 경고만, fail-open). 비활성화는 `CC_PIPE_NO_UPDATE=1`.
+
+수동 확인/적용:
+```sh
+sh ./.cc-pipe/update.sh --check-only   # 확인만
+sh ./.cc-pipe/update.sh                # 확인 + 적용
+```
+```powershell
+.\.cc-pipe\update.ps1 -CheckOnly
+.\.cc-pipe\update.ps1
+```
+
+---
+
 ## 동작 흐름
 
 계획 단계는 **CLI 스크립트**와 **Codex 앱** 두 경로로 진입할 수 있으며, 두 경로 모두 동일한 `codex-plan.json`으로 수렴한다.
@@ -78,38 +110,6 @@ flowchart TD
 ```
 
 인자 없이 실행하면 사용법을 출력한다.
-
----
-
-## 다른 프로젝트에 설치
-
-cc-pipe를 설치할 프로젝트 루트에서 아래 원라이너를 실행한다(저장소 public). 전체 명령·옵션은 [`INSTALL.md`](INSTALL.md) 참고.
-
-**Windows (PowerShell)**
-```powershell
-$repo="https://github.com/kwjdia/cc-pipe.git"; $tmp=Join-Path $env:TEMP ("cc-pipe-"+[guid]::NewGuid()); git clone --depth 1 $repo $tmp; & (Join-Path $tmp "install.ps1") -TargetPath (Get-Location); Remove-Item -LiteralPath $tmp -Recurse -Force
-```
-
-**macOS / Linux**
-```sh
-tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT; git clone --depth 1 https://github.com/kwjdia/cc-pipe.git "$tmp" && sh "$tmp/install.sh" "$(pwd)"
-```
-
-설치되는 것: `dev-planner` 스킬 · `scripts/ai-dev.sh`·`ai-build.sh` · `docs/ai/runs/` · `.cc-pipe/`(업데이터+`version.json`) · `AGENTS.md`/`CLAUDE.md` 관리 블록(기존 내용 보존).
-
-### 자동 업데이트
-
-설치본에서 `./scripts/ai-dev.sh`를 실행하면 시작 시 원격 `main`과 버전을 비교해 최신이 아니면 **자동 재설치 후 진행**한다(오프라인/실패 시 경고만, fail-open). 비활성화는 `CC_PIPE_NO_UPDATE=1`.
-
-수동 확인/적용:
-```sh
-sh ./.cc-pipe/update.sh --check-only   # 확인만
-sh ./.cc-pipe/update.sh                # 확인 + 적용
-```
-```powershell
-.\.cc-pipe\update.ps1 -CheckOnly
-.\.cc-pipe\update.ps1
-```
 
 ---
 

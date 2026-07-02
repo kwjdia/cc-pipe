@@ -56,6 +56,47 @@ sh ./.cc-pipe/update.sh                # 확인 + 적용
 
 ---
 
+## 사용 방법
+
+> **사전 요구사항**: git 저장소(`git init`), `codex`·`claude`·`python 3` PATH 등록·로그인. Windows에서 파이프라인 스크립트는 **Git Bash 또는 WSL**에서 실행한다(설치·업데이트 명령은 PowerShell 가능).
+
+계획(Plan) 진입은 **CLI**와 **코딩 앱** 두 가지이며, 어느 경로든 `codex-plan.json`으로 수렴한 뒤 사람이 승인하면 Claude가 구현한다.
+
+### 1) CLI 방식 — 완전 자동 (권장)
+
+터미널에서 요청 한 줄로 분석 → 승인 → 구현까지 실행한다.
+
+```bash
+./scripts/ai-dev.sh "로그인 5회 실패 시 계정을 잠금 처리해줘"
+```
+
+- Codex가 요청을 분석해 계획(JSON)을 만들고 요약을 보여준 뒤 `[y/N]` 승인을 받는다.
+- `y`면 Claude가 **승인 범위만** 구현하고, 산출물이 `docs/ai/runs/<timestamp>/`에 저장된다.
+- 끝나면 `git diff`로 변경을 확인하고 직접 commit 한다. (자동 commit 없음)
+
+이미 만들어 둔 계획으로 **빌드만** 다시 하려면:
+
+```bash
+./scripts/ai-build.sh docs/ai/runs/<timestamp>
+```
+
+### 2) 코딩 앱 방식 — 대화형 계획
+
+Codex 앱·Claude Code 등에서 프로젝트를 열면, 설치 시 주입된 `AGENTS.md`·`CLAUDE.md` 관리 블록을 에이전트가 자동으로 읽어 파이프라인 규칙을 따른다.
+
+**Codex 앱 (Planner)** — 질문을 즉석에서 해소하며 계획을 다듬을 때 유리하다.
+
+1. composer에서 스킬을 호출: `$dev-planner 로그인 5회 실패 시 계정 잠금 처리`
+2. 대화로 요구사항·가정·질문을 확정한다.
+3. 확정된 계획 JSON을 `docs/ai/runs/<timestamp>/codex-plan.json`으로 저장한다.
+4. 빌드는 사람이 실행: `./scripts/ai-build.sh docs/ai/runs/<timestamp>`
+
+**Claude Code 앱 (Builder)** — 승인된 계획을 구현하는 단계. `CLAUDE.md` 블록의 Builder 규칙(승인 범위만·신규 파일은 Write·Secret 금지 등)을 따른다. 앱 내장 터미널에서 위 스크립트를 그대로 실행해도 된다.
+
+> 코딩 앱에서도 Codex는 Claude를 직접 호출하지 않는다. 계획과 빌드 사이에는 항상 사람의 승인이 들어간다.
+
+---
+
 ## 동작 흐름
 
 계획 단계는 **CLI 스크립트**와 **Codex 앱** 두 경로로 진입할 수 있으며, 두 경로 모두 동일한 `codex-plan.json`으로 수렴한다.
@@ -90,26 +131,6 @@ flowchart TD
 ```
 
 > 시각화된 상세 흐름도: [`docs/ai-dev-pipeline-flow.html`](docs/ai-dev-pipeline-flow.html)
-
----
-
-## 빠른 시작
-
-### 사전 요구사항
-1. **git 저장소** — `git init` 완료 상태여야 구현 후 `git diff` 검토가 의미 있다.
-2. **POSIX 셸** — 스크립트는 bash 기반. Windows에서는 **Git Bash 또는 WSL**에서 실행(PowerShell 불가).
-3. **CLI 설치·로그인** — `codex`, `claude`, `python 3`가 PATH에 있어야 한다.
-
-### 사용법
-```bash
-# 전체 파이프라인 (분석 → 승인 → 구현)
-./scripts/ai-dev.sh "개발 요청 내용"
-
-# 이미 만들어진 계획으로 빌드만 (Codex 앱 경로 등)
-./scripts/ai-build.sh docs/ai/runs/<timestamp>
-```
-
-인자 없이 실행하면 사용법을 출력한다.
 
 ---
 

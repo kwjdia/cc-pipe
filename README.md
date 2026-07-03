@@ -60,48 +60,50 @@ sh ./.cc-pipe/update.sh                # 확인 + 적용
 
 > **사전 요구사항**: git 저장소(`git init`), `codex`·`claude`·`python 3` PATH 등록·로그인. Windows에서 파이프라인 스크립트는 **Git Bash 또는 WSL**에서 실행한다(설치·업데이트 명령은 PowerShell 가능).
 
-계획(Plan) 진입은 **CLI**와 **코딩 앱** 두 가지이며, 어느 경로든 `codex-plan.json`으로 수렴한 뒤 사람이 승인하면 Claude가 구현한다.
+기본 사용법은 **Codex 앱의 `dev-runner` 스킬**이다. 한 번의 요청으로 개발 계획 생성부터 Claude 구현까지 자동으로 이어진다.
 
-### 1) CLI 방식 — 완전 자동 (권장)
+### 기본: Codex 앱 `dev-runner` (원스텝 자동)
 
-터미널에서 요청 한 줄로 분석 → 승인 → 구현까지 실행한다.
+Codex 앱에서 프로젝트를 열고 composer에서 스킬을 호출한다.
+
+```
+$dev-runner 로그인 5회 실패 시 계정을 잠금 처리해줘
+```
+
+진행 순서(자동):
+
+1. **계획** — Codex가 요청을 분석해 개발 계획(JSON)을 만든다. 요구사항·범위·테스트 기준·`claude_prompt`를 포함한다.
+2. **저장** — 계획을 `docs/ai/runs/<timestamp>/codex-plan.json`에 저장한다(원본 요청도 함께).
+3. **구현** — 곧바로 `./scripts/ai-build.sh <run-dir> --yes`가 실행되어, **Claude가 승인 범위(`scope.included`)만** 구현한다. 결과는 `docs/ai/runs/<timestamp>/claude-result.md`에 저장된다.
+4. **검토** — 끝나면 사람이 `git diff`로 변경을 확인하고 직접 commit 한다. (자동 commit 없음)
+
+주의:
+
+- `dev-runner`는 Codex 앱에 **명령 실행 권한(비 read-only)** 이 필요하다. 계획 저장과 빌드 실행에 셸을 쓰기 때문이다.
+- **승인 게이트 없이 자동 실행**된다. 실제 코드가 변경되므로 반드시 실행 후 `git diff`로 확인한다.
+- Codex는 계획(JSON)만 만들고, 실제 구현은 `ai-build.sh`가 호출하는 **Claude**가 담당한다(역할 분리 유지).
+- 파괴적·비가역 작업(스키마 변경·대량 삭제 등)이나 사람 승인을 꼭 거치고 싶은 작업은 아래 대체 경로를 쓴다.
+
+### 대체 1: CLI (`ai-dev.sh`) — 승인 게이트 유지
+
+터미널에서 한 줄로 실행하되, Claude 실행 전 `[y/N]` 승인을 받는다.
 
 ```bash
 ./scripts/ai-dev.sh "로그인 5회 실패 시 계정을 잠금 처리해줘"
 ```
 
-- Codex가 요청을 분석해 계획(JSON)을 만들고 요약을 보여준 뒤 `[y/N]` 승인을 받는다.
-- `y`면 Claude가 **승인 범위만** 구현하고, 산출물이 `docs/ai/runs/<timestamp>/`에 저장된다.
-- 끝나면 `git diff`로 변경을 확인하고 직접 commit 한다. (자동 commit 없음)
-
-이미 만들어 둔 계획으로 **빌드만** 다시 하려면:
+Codex가 계획 요약을 보여주고 승인을 받은 뒤에만 Claude가 구현한다. 이미 만들어 둔 계획으로 **빌드만** 다시 하려면:
 
 ```bash
-./scripts/ai-build.sh docs/ai/runs/<timestamp>
+./scripts/ai-build.sh docs/ai/runs/<timestamp>       # 승인 게이트 있음
+./scripts/ai-build.sh docs/ai/runs/<timestamp> --yes # 무프롬프트 자동
 ```
 
-### 2) 코딩 앱 방식 — 대화형 계획
+### 대체 2: Codex 앱 `dev-planner` — 계획만
 
-Codex 앱·Claude Code 등에서 프로젝트를 열면, 설치 시 주입된 `AGENTS.md`·`CLAUDE.md` 관리 블록을 에이전트가 자동으로 읽어 파이프라인 규칙을 따른다. Codex 앱에는 계획 전용(`dev-planner`)과 원스텝 자동(`dev-runner`) 두 스킬이 있다.
+계획 단계에서 멈추고 질문을 즉석 해소하며 다듬을 때 쓴다. `$dev-planner <요청>`으로 계획을 만들어 `codex-plan.json`으로 저장한 뒤, 사람이 검토하고 위 `ai-build.sh`로 빌드한다.
 
-**Codex 앱 — 원스텝 자동 (`dev-runner`)** — 계획 생성부터 Claude 빌드까지 한 번에.
-
-1. composer에서 호출: `$dev-runner 로그인 5회 실패 시 계정 잠금 처리`
-2. Codex가 계획(JSON)을 만들어 `docs/ai/runs/<timestamp>/`에 저장한 뒤, `ai-build.sh --yes`로 **Claude 빌드까지 자동 실행**한다.
-3. 끝나면 `git diff`로 검토 후 commit.
-
-> `dev-runner`는 명령 실행 권한(비 read-only)이 필요하며 **승인 게이트 없이 자동 실행**된다. 계획 단계에서 멈추고 사람이 승인하려면 아래 `dev-planner`를 쓴다.
-
-**Codex 앱 — 계획만 (`dev-planner`)** — 질문을 즉석 해소하며 계획을 다듬고, 빌드는 사람이 승인.
-
-1. composer에서 호출: `$dev-planner 로그인 5회 실패 시 계정 잠금 처리`
-2. 대화로 요구사항·가정·질문을 확정한다.
-3. 확정된 계획 JSON을 `docs/ai/runs/<timestamp>/codex-plan.json`으로 저장한다.
-4. 빌드는 사람이 실행: `./scripts/ai-build.sh docs/ai/runs/<timestamp>`
-
-**Claude Code 앱 (Builder)** — 승인된 계획을 구현하는 단계. `CLAUDE.md` 블록의 Builder 규칙(승인 범위만·신규 파일은 Write·Secret 금지 등)을 따른다. 앱 내장 터미널에서 위 스크립트를 그대로 실행해도 된다.
-
-> `dev-planner` 경로에서는 Codex가 Claude를 직접 호출하지 않고 계획과 빌드 사이에 사람 승인이 들어간다. `dev-runner`는 이 게이트를 생략하는 자동 경로다.
+> `dev-runner`/`--yes`는 승인 게이트를 생략하는 자동 경로이고, `ai-dev.sh`/`dev-planner`는 계획과 빌드 사이에 사람 승인이 들어가는 경로다. 어느 경우든 Codex는 Claude를 직접 호출하지 않고 `codex-plan.json`으로 넘긴다.
 
 ---
 
